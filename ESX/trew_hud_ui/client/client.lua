@@ -36,34 +36,6 @@ Citizen.CreateThread(function()
 	end
 end)
 
--- Location update
-Citizen.CreateThread(function()
-
-	while Config.ui.showLocation do
-		Citizen.Wait(200)
-		local player = PlayerPedId()
-		local position = GetEntityCoords(player)
-		local zoneNameFull = zones[GetNameOfZone(position.x, position.y, position.z)]
-		local streetName = GetStreetNameFromHashKey(GetStreetNameAtCoord(position.x, position.y, position.z))
-
-		local locationMessage = nil
-
-		if zoneNameFull then 
-			locationMessage = streetName .. ', ' .. zoneNameFull
-		else
-			locationMessage = streetName
-		end
-
-		locationMessage = string.format(
-			Locales[Config.Locale]['you_are_on_location'],
-			locationMessage
-		)
-
-		SendNUIMessage({ action = 'setText', id = 'location', value = locationMessage })
-	end
-end)
-
-
 -- Vehicle Info
 local vehicleCruiser
 local vehicleSignalIndicator = 'off'
@@ -215,29 +187,21 @@ Citizen.CreateThread(function()
 	end
 end)
 
-
-
-
 -- Player status
 Citizen.CreateThread(function()
-
 	while true do
 		Citizen.Wait(5000)
-
 		local playerStatus 
 		local showPlayerStatus = 0
 		playerStatus = { action = 'setStatus', status = {} }
-
+			
 		if Config.ui.showHealth then
 			showPlayerStatus = (showPlayerStatus+1)
-
 			playerStatus['isdead'] = false
-
 			playerStatus['status'][showPlayerStatus] = {
 				name = 'health',
 				value = GetEntityHealth(GetPlayerPed(-1)) - 100
 			}
-
 			if IsEntityDead(GetPlayerPed(-1)) then
 				playerStatus.isdead = true
 			end
@@ -245,7 +209,6 @@ Citizen.CreateThread(function()
 
 		if Config.ui.showArmor then
 			showPlayerStatus = (showPlayerStatus+1)
-
 			playerStatus['status'][showPlayerStatus] = {
 				name = 'armor',
 				value = GetPedArmour(GetPlayerPed(-1)),
@@ -254,103 +217,27 @@ Citizen.CreateThread(function()
 
 		if Config.ui.showStamina  then
 			showPlayerStatus = (showPlayerStatus+1)
-
 			playerStatus['status'][showPlayerStatus] = {
 				name = 'stamina',
 				value = 100 - GetPlayerSprintStaminaRemaining(PlayerId()),
 			}
 		end
-
 		
-
 		if showPlayerStatus > 0 then
 			SendNUIMessage(playerStatus)
 		end
-
-	TriggerEvent('esx:getSharedObject', function(obj)
-  		ESX = obj
-  		ESX.PlayerData = ESX.GetPlayerData()
-  	end)
-
-
-	if ESX.PlayerData.job then
-  	   local job
-  	   local blackMoney
-  	   local bank
-	   local money
-
-        if ESX.PlayerData.job.label == ESX.PlayerData.job.grade_label then
-          job = ESX.PlayerData.job.grade_label
-        else
-          job = ESX.PlayerData.job.label .. ': ' .. ESX.PlayerData.job.grade_label
-        end
-
-
-        for i=1, #ESX.PlayerData.accounts, 1 do
-          if ESX.PlayerData.accounts[i].name == 'black_money' then
-                blackMoney = ESX.PlayerData.accounts[i].money
-          elseif ESX.PlayerData.accounts[i].name == 'bank' then
-                bank = ESX.PlayerData.accounts[i].money
-             elseif ESX.PlayerData.accounts[i].name == 'money' then
-                money = ESX.PlayerData.accounts[i].money
-          end
-        end
-
-  	SendNUIMessage({ action = 'setText', id = 'job', value = job })
-  	SendNUIMessage({ action = 'setMoney', id = 'wallet', value = money })
-  	SendNUIMessage({ action = 'setMoney', id = 'bank', value = bank })
-  	SendNUIMessage({ action = 'setMoney', id = 'blackMoney', value = blackMoney })
-
-  		if ESX.PlayerData.job.grade_name ~= nil and ESX.PlayerData.job.grade_name == 'boss' then
-  			if (Config.ui.showSocietyMoney == true) then
-  				SendNUIMessage({ action = 'element', task = 'enable', value = 'society' })
-  			end
-  			ESX.TriggerServerCallback('esx_society:getSocietyMoney', function(money)
-  				SendNUIMessage({ action = 'setMoney', id = 'society', value = money })
-  			end, ESX.PlayerData.job.name)
-  		else
-  			SendNUIMessage({ action = 'element', task = 'disable', value = 'society' })
-  		end
-  	end
+	end)
 
   	local playerStatus 
   	local showPlayerStatus = 0
   	playerStatus = { action = 'setStatus', status = {} }
-
-
-  	if Config.ui.showHunger then
-  		showPlayerStatus = (showPlayerStatus+1)
-
-  		TriggerEvent('esx_status:getStatus', 'hunger', function(status)
-  			playerStatus['status'][showPlayerStatus] = {
-  				name = 'hunger',
-  				value = math.floor(100-status.getPercent())
-  			}
-  		end)
-
-  	end
-
-  	if Config.ui.showThirst then
-  		showPlayerStatus = (showPlayerStatus+1)
-
-  		TriggerEvent('esx_status:getStatus', 'thirst', function(status)
-  			playerStatus['status'][showPlayerStatus] = {
-  				name = 'thirst',
-  				value = math.floor(100-status.getPercent())
-  			}
-  		end)
-  	end
-
-  	if showPlayerStatus > 0 then
-  	    SendNUIMessage(playerStatus)
-  	end
+  	if showPlayerStatus > 0 then SendNUIMessage(playerStatus) end
     end
 end)
 
 
 -- Voice detection and distance
 Citizen.CreateThread(function()
-
 	if Config.ui.showVoice then
 
 	    RequestAnimDict('facials@gen_male@variations@normal')
@@ -540,21 +427,6 @@ Citizen.CreateThread(function()
 	end
 end)
 
-AddEventHandler('esx:onPlayerSpawn', function()
-	SendNUIMessage({ action = 'ui', config = Config.ui })
-	SendNUIMessage({ action = 'setFont', url = Config.font.url, name = Config.font.name })
-	SendNUIMessage({ action = 'setLogo', value = Config.serverLogo })
-	if Config.ui.showVoice then
-		if Config.voice.levels.current == 0 then
-			NetworkSetTalkerProximity(Config.voice.levels.default)
-		elseif Config.voice.levels.current == 1 then
-			NetworkSetTalkerProximity(Config.voice.levels.shout)
-		elseif Config.voice.levels.current == 2 then
-			NetworkSetTalkerProximity(Config.voice.levels.whisper)
-		end
-	end
-end)
-
 AddEventHandler('playerSpawned', function()
 	if Config.ui.showVoice == true then
 	    NetworkSetTalkerProximity(5.0)
@@ -630,85 +502,6 @@ AddEventHandler('trew_hud_ui:syncCarLights', function(driver, status)
 	end
 end)
 
-function trewDate()
-	local timeString = nil
-	local day = _U('day_' .. GetClockDayOfMonth())
-	local weekDay = _U('weekDay_' .. GetClockDayOfWeek())
-	local month = _U('month_' .. GetClockMonth())
-	local day = _U('day_' .. GetClockDayOfMonth())
-	local year = GetClockYear()
-	local hour = GetClockHours()
-	local minutes = GetClockMinutes()
-	local time = nil
-	local AmPm = ''
-
-
-	if Config.date.AmPm then
-		if hour >= 13 and hour <= 24 then
-			hour = hour - 12
-			AmPm = 'PM'
-		else
-			if hour == 0 or hour == 24 then
-				hour = 12
-			end
-			AmPm = 'AM'
-		end
-
-	end
-
-	if hour <= 9 then
-		hour = '0' .. hour
-	end
-	if minutes <= 9 then
-		minutes = '0' .. minutes
-	end
-
-	time = hour .. ':' .. minutes .. ' ' .. AmPm
-
-
-
-
-	local date_format = Locales[Config.Locale]['date_format'][Config.date.format]
-
-	if Config.date.format == 'default' then
-		timeString = string.format(
-			date_format,
-			day, month, year
-		)
-	elseif Config.date.format == 'simple' then
-		timeString = string.format(
-			date_format,
-			day, month
-		)
-
-	elseif Config.date.format == 'simpleWithHours' then
-		timeString = string.format(
-			date_format,
-			time, day, month
-		)	
-	elseif Config.date.format == 'withWeekday' then
-		timeString = string.format(
-			date_format,
-			weekDay, day, month, year
-		)
-	elseif Config.date.format == 'withHours' then
-		timeString = string.format(
-			date_format,
-			time, day, month, year
-		)
-	elseif Config.date.format == 'withWeekdayAndHours' then
-		timeString = string.format(
-			date_format,
-			time, weekDay, day, month, year
-		)
-	end
-
-
-	
-
-	return timeString
-end
-
 function has_value(tab, val)
     for index, value in ipairs(tab) do
         if value == val then
@@ -718,35 +511,6 @@ function has_value(tab, val)
 
     return false
 end
-
-local toggleui = false
-RegisterCommand('toggleui', function()
-	if not toggleui then
-		SendNUIMessage({ action = 'element', task = 'disable', value = 'job' })
-		SendNUIMessage({ action = 'element', task = 'disable', value = 'society' })
-		SendNUIMessage({ action = 'element', task = 'disable', value = 'bank' })
-		SendNUIMessage({ action = 'element', task = 'disable', value = 'blackMoney' })
-		SendNUIMessage({ action = 'element', task = 'disable', value = 'wallet' })
-	else
-		if (Config.ui.showJob == true) then
-			SendNUIMessage({ action = 'element', task = 'enable', value = 'job' })
-		end
-		if (Config.ui.showSocietyMoney == true) then
-			SendNUIMessage({ action = 'element', task = 'enable', value = 'society' })
-		end
-		if (Config.ui.showBankMoney == true) then
-			SendNUIMessage({ action = 'element', task = 'enable', value = 'bank' })
-		end
-		if (Config.ui.showBlackMoney == true) then
-			SendNUIMessage({ action = 'element', task = 'enable', value = 'blackMoney' })
-		end
-		if (Config.ui.showWalletMoney == true) then
-			SendNUIMessage({ action = 'element', task = 'enable', value = 'wallet' })
-		end
-	end
-
-	toggleui = not toggleui
-end)
 
 exports('createStatus', function(args)
 	local statusCreation = { action = 'createStatus', status = args['status'], color = args['color'], icon = args['icon'] }
